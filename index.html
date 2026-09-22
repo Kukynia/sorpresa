@@ -19,6 +19,9 @@
   <!-- Canvas Confetti CDN -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
+  <!-- YouTube IFrame Player API para música de fondo ("Flores Amarillas") -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <style>
     :root {
       --pot-color: #c96b4b;
@@ -724,6 +727,11 @@
 
   </div>
 
+  <!-- Reproductor de YouTube de fondo ("Flores Amarillas") -->
+  <div id="yt-player-wrap" style="position:fixed; bottom:0; right:0; width:200px; height:200px; opacity:0.001; pointer-events:none; z-index:-10; overflow:hidden;">
+    <div id="ytPlayer"></div>
+  </div>
+
   <script>
     // --- ESTADO DE LA APLICACIÓN ---
     let currentStep = 0;
@@ -860,13 +868,66 @@
       }
     }
 
-    // Toggle sonido
+    // --- MÚSICA DE FONDO (YouTube Iframe API: "Flores Amarillas" - Floricienta) ---
+    let ytPlayer = null;
+    let isYtReady = false;
+    let musicStarted = false;
+
+    window.onYouTubeIframeAPIReady = function() {
+      ytPlayer = new YT.Player('ytPlayer', {
+        height: '200',
+        width: '200',
+        videoId: 'S7gMzYqXIZc',
+        playerVars: {
+          'autoplay': 0,
+          'controls': 0,
+          'disablekb': 1,
+          'fs': 0,
+          'loop': 1,
+          'playlist': 'S7gMzYqXIZc',
+          'playsinline': 1,
+          'rel': 0
+        },
+        events: {
+          'onReady': onPlayerReady
+        }
+      });
+    };
+
+    function onPlayerReady(event) {
+      isYtReady = true;
+      try {
+        event.target.setVolume(85);
+      } catch(e) {}
+      if (musicStarted && !isSoundMuted) {
+        startMusic();
+      }
+    }
+
+    function startMusic() {
+      musicStarted = true;
+      if (isYtReady && ytPlayer && typeof ytPlayer.playVideo === 'function' && !isSoundMuted) {
+        try {
+          ytPlayer.playVideo();
+        } catch(e) {}
+      }
+    }
+
+    // Toggle sonido (Silenciar / Reactivar música y campanitas)
     soundBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       initAudio();
       isSoundMuted = !isSoundMuted;
       soundIcon.textContent = isSoundMuted ? '🔇' : '🎵';
       soundBtn.style.opacity = isSoundMuted ? '0.6' : '1';
+
+      if (ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+        if (isSoundMuted) {
+          try { ytPlayer.pauseVideo(); } catch(err) {}
+        } else {
+          try { ytPlayer.playVideo(); } catch(err) {}
+        }
+      }
     });
 
     // Vibración háptica
@@ -881,6 +942,7 @@
     // --- ACCIÓN AL PULSAR EL BOTÓN "¿POR QUE? 🥰" ---
     growBtn.addEventListener('click', () => {
       initAudio();
+      startMusic();
       triggerHaptic();
 
       if (currentStep < totalSteps) {
@@ -1041,9 +1103,10 @@
       }
     });
 
-    // Desbloquear audio en el primer toque de pantalla en iOS
+    // Desbloquear audio y música en el primer toque de pantalla en iOS
     document.addEventListener('touchstart', () => {
       initAudio();
+      startMusic();
     }, { once: true });
   </script>
 </body>
